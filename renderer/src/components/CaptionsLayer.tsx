@@ -7,12 +7,81 @@ import type { CaptionWord } from "../types/editPlan";
 import { sourceTimeToOutputSeconds } from "../lib/timeMap";
 import type { OutputTimeline } from "../lib/timeMap";
 
-function combineMsForGrouping(
-  grouping: NonNullable<EditPlan["captions"]["grouping"]> | undefined,
-): number {
-  if (grouping === "word_by_word") return 1;
-  if (grouping === "phrase") return 450;
-  return 12000;
+const PHRASE_COMBINE_MS = 450;
+const MAX_SENTENCE_WORDS = 10;
+const MAX_SENTENCE_DURATION_MS = 3200;
+
+type PageToken = {
+  text: string;
+  fromMs: number;
+  toMs: number;
+};
+
+type CaptionPage = {
+  text: string;
+  startMs: number;
+  durationMs: number;
+  tokens: PageToken[];
+};
+
+function endsSentence(tokenText: string): boolean {
+  return /[.!?]["')\]]*$/.test(tokenText.trim());
+}
+
+function makePage(tokens: PageToken[]): CaptionPage {
+  const startMs = tokens[0]?.fromMs ?? 0;
+  const endMs = tokens[tokens.length - 1]?.toMs ?? startMs + 1;
+  return {
+    text: tokens.map((t) => t.text).join(" "),
+    startMs,
+    durationMs: Math.max(1, endMs - startMs),
+    tokens,
+  };
+}
+
+function buildSentencePages(words: CaptionWord[]): CaptionPage[] {
+  const pages: CaptionPage[] = [];
+  let current: PageToken[] = [];
+
+  const flush = () => {
+    if (current.length === 0) return;
+    pages.push(makePage(current));
+    current = [];
+  };
+
+  for (const w of words) {
+    const next: PageToken = {
+      text: w.word,
+      fromMs: w.start_s * 1000,
+      toMs: w.end_s * 1000,
+    };
+
+    if (current.length > 0) {
+      const firstMs = current[0].fromMs;
+      const projectedWords = current.length + 1;
+      const projectedDuration = next.toMs - firstMs;
+      if (
+        projectedWords > MAX_SENTENCE_WORDS ||
+        projectedDuration > MAX_SENTENCE_DURATION_MS
+      ) {
+        flush();
+      }
+    }
+
+    current.push(next);
+
+    const duration = current[current.length - 1].toMs - current[0].fromMs;
+    if (
+      endsSentence(next.text) ||
+      current.length >= MAX_SENTENCE_WORDS ||
+      duration >= MAX_SENTENCE_DURATION_MS
+    ) {
+      flush();
+    }
+  }
+
+  flush();
+  return pages;
 }
 
 function findWordForToken(
@@ -97,6 +166,9 @@ export const CaptionsLayer: React.FC<Props> = ({ editPlan, timeline }) => {
         ],
       }));
     }
+    if (grouping === "sentence") {
+      return buildSentencePages(wordsInKept);
+    }
     const cap: Caption[] = wordsInKept.map((w) => ({
       text: w.word,
       startMs: w.start_s * 1000,
@@ -106,7 +178,7 @@ export const CaptionsLayer: React.FC<Props> = ({ editPlan, timeline }) => {
     }));
     const { pages: tiktokPages } = createTikTokStyleCaptions({
       captions: cap,
-      combineTokensWithinMilliseconds: combineMsForGrouping(grouping),
+      combineTokensWithinMilliseconds: PHRASE_COMBINE_MS,
     });
     return tiktokPages.map((p) => ({
       text: p.text,
@@ -134,6 +206,7 @@ export const CaptionsLayer: React.FC<Props> = ({ editPlan, timeline }) => {
           color: "#fff",
           textShadow: "0 2px 8px rgba(0,0,0,0.85)",
           lineHeight: 1.25,
+          whiteSpace: "normal",
         }}
       >
         {pages.map((page, idx) => {

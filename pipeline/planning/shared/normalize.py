@@ -4,6 +4,8 @@ import json
 import re
 from typing import Any
 
+ALLOWED_EMPHASIS = {"none", "highlight", "bold", "color_pop"}
+
 
 def extract_json_object(text: str) -> dict[str, Any]:
     text = text.strip()
@@ -226,6 +228,140 @@ def filter_timed_items(items: list[dict[str, Any]], duration_s: float) -> list[d
     return cleaned
 
 
+def _normalized_word(text: str) -> str:
+    token = re.sub(r"[^\w']+", "", str(text).lower())
+    return token.strip()
+
+
+def _coerce_caption_words(words: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    cleaned: list[dict[str, Any]] = []
+    for item in words or []:
+        try:
+            word = str(item["word"]).strip()
+            start_s = round(float(item["start_s"]), 2)
+            end_s = round(float(item["end_s"]), 2)
+        except Exception:
+            continue
+        if not word or end_s <= start_s:
+            continue
+        out: dict[str, Any] = {
+            "word": word,
+            "start_s": start_s,
+            "end_s": end_s,
+        }
+        emphasis = item.get("emphasis")
+        if emphasis in ALLOWED_EMPHASIS and emphasis != "none":
+            out["emphasis"] = emphasis
+        cleaned.append(out)
+    return cleaned
+
+
+def _coerce_model_caption_words(words: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    cleaned: list[dict[str, Any]] = []
+    for item in words or []:
+        word = str(item.get("word", "")).strip()
+        if not word:
+            continue
+        out: dict[str, Any] = {"word": word}
+        emphasis = item.get("emphasis")
+        if emphasis in ALLOWED_EMPHASIS and emphasis != "none":
+            out["emphasis"] = emphasis
+        if item.get("omit") is True:
+            out["omit"] = True
+        cleaned.append(out)
+    return cleaned
+
+
+def merge_caption_decisions_with_whisper(
+    whisper_words: list[dict[str, Any]],
+    model_captions: dict[str, Any] | None,
+) -> list[dict[str, Any]]:
+    """
+    Keep Whisper timings authoritative while merging model caption creativity.
+
+    Supported model decisions:
+    - per-word emphasis from `captions.words[*].emphasis`
+    - optional omission from `captions.words[*].omit == true`
+    - optional index hints via `captions.emphasis_by_index` and `captions.omit_indices`
+    """
+    whisper = _coerce_caption_words(whisper_words)
+    if not whisper:
+        return []
+
+    model_captions = model_captions or {}
+    model_words = _coerce_model_caption_words(model_captions.get("words"))
+    emphasis_by_index_raw = model_captions.get("emphasis_by_index")
+    omit_indices_raw = model_captions.get("omit_indices")
+
+    omit_indices: set[int] = set()
+    for idx in omit_indices_raw or []:
+        try:
+            i = int(idx)
+        except (TypeError, ValueError):
+            continue
+        if 0 <= i < len(whisper):
+            omit_indices.add(i)
+
+    if isinstance(emphasis_by_index_raw, dict):
+        for idx, emphasis in emphasis_by_index_raw.items():
+            try:
+                i = int(idx)
+            except (TypeError, ValueError):
+                continue
+            if 0 <= i < len(whisper) and emphasis in ALLOWED_EMPHASIS and emphasis != "none":
+                whisper[i]["emphasis"] = emphasis
+
+    # Greedy alignment from model words to Whisper words for emphasis/omit transfer.
+    # Whisper timestamps remain untouched.
+    search_from = 0
+    for model_word in model_words:
+        mw = _normalized_word(model_word["word"])
+        if not mw:
+            continue
+
+        best_idx: int | None = None
+        for i in range(search_from, min(len(whisper), search_from + 16)):
+            ww = _normalized_word(whisper[i]["word"])
+            if ww and ww == mw:
+                best_idx = i
+                break
+
+        if best_idx is None:
+            for i in range(0, len(whisper)):
+                ww = _normalized_word(whisper[i]["word"])
+                if ww and ww == mw:
+                    best_idx = i
+                    break
+
+        if best_idx is None:
+            continue
+
+        if model_word.get("omit") is True:
+            omit_indices.add(best_idx)
+
+        emphasis = model_word.get("emphasis")
+        if emphasis in ALLOWED_EMPHASIS and emphasis != "none":
+            whisper[best_idx]["emphasis"] = emphasis
+
+        search_from = max(search_from, best_idx + 1)
+
+    merged: list[dict[str, Any]] = []
+    for i, w in enumerate(whisper):
+        if i in omit_indices:
+            continue
+        out = {
+            "word": w["word"],
+            "start_s": w["start_s"],
+            "end_s": w["end_s"],
+        }
+        emphasis = w.get("emphasis")
+        if emphasis in ALLOWED_EMPHASIS and emphasis != "none":
+            out["emphasis"] = emphasis
+        merged.append(out)
+
+    return merged
+
+
 def default_keep_plan(
     source_meta: dict[str, Any],
     caption_words: list[dict[str, Any]] | None = None,
@@ -278,6 +414,9 @@ def build_final_plan(
     caption_words: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     duration_s = float(source_meta["duration_s"])
+    model_captions = model_plan.get("captions")
+    if not isinstance(model_captions, dict):
+        model_captions = None
     plan = {
         "source_video": {
             "duration_s": source_meta["duration_s"],
@@ -286,7 +425,7 @@ def build_final_plan(
             "fps": source_meta["fps"],
         },
         "segments": make_gapless_segments(model_plan.get("segments", []), duration_s),
-        "captions": model_plan.get("captions")
+        "captions": model_captions
         or {
             "enabled": True,
             "position": "bottom_center",
@@ -313,11 +452,17 @@ def build_final_plan(
         },
     }
 
-    # Whisper timings are the authoritative caption timeline when available.
+    plan["captions"].setdefault("enabled", True)
+
+    # Whisper timings are authoritative; model can still contribute creative decisions
+    # (emphasis/selection) through merge_caption_decisions_with_whisper().
     if caption_words is not None:
-        plan["captions"]["words"] = caption_words
+        plan["captions"]["words"] = merge_caption_decisions_with_whisper(
+            caption_words,
+            plan["captions"],
+        )
     else:
-        plan["captions"].setdefault("words", [])
+        plan["captions"]["words"] = _coerce_caption_words(plan["captions"].get("words"))
 
     plan["music"].setdefault("enabled", False)
     plan["music"].setdefault("mood", "none")

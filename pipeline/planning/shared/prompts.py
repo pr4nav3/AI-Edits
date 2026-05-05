@@ -26,7 +26,14 @@ Required top-level object:
     "enabled": boolean,
     "position": "bottom_center" | "top_center" | "center" | "bottom_left" | "bottom_right",
     "grouping": "word_by_word" | "phrase" | "sentence",
-    "words": []
+    "words": [
+      {
+        "word": string,
+        "start_s": number,
+        "end_s": number,
+        "emphasis": "none" | "highlight" | "bold" | "color_pop"
+      }
+    ]
   },
   "zooms": [
     {
@@ -133,6 +140,8 @@ Requirements:
 - Use cuts to remove silence/filler/repetition.
 - Use overlays and text only when they clearly support spoken content.
 - Keep edits tasteful and avoid over-editing.
+- Whisper timing is authoritative; focus caption creativity on grouping and per-word emphasis.
+- Keep caption words aligned with Whisper transcript ordering.
 - Output valid JSON only, no prose.
 
 Contract:

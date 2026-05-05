@@ -216,4 +216,6 @@ This is useful for quickly seeing what Pass 1 generated versus what was accepted
 - Local validation uses `pipeline/render/validate_plan.py`.
 - Local render uses `pipeline/render/render.py`.
 - `edit_plan_schema.json` remains the source-of-truth contract.
+- Caption timing uses a hybrid merge: Whisper word timings are canonical, while model caption
+  output can still influence creative decisions like grouping and per-word emphasis.
 
