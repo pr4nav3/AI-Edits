@@ -94,7 +94,7 @@ def make_gapless_segments(
     eps: float = 0.05,
 ) -> list[dict[str, Any]]:
     cleaned: list[dict[str, Any]] = []
-    duration_rounded = round(float(duration_s), 2)
+    duration_exact = round(float(duration_s), 3)
 
     for seg in segments or []:
         try:
@@ -184,7 +184,7 @@ def make_gapless_segments(
     if duration_s - cursor > eps:
         tail = {
             "start_s": round(cursor, 2),
-            "end_s": duration_rounded,
+            "end_s": duration_exact,
             "action": "keep",
             "speed": 1.0,
             "transition_in": {"type": "none"},
@@ -196,7 +196,7 @@ def make_gapless_segments(
         return [
             {
                 "start_s": 0.0,
-                "end_s": duration_rounded,
+                "end_s": duration_exact,
                 "action": "keep",
                 "speed": 1.0,
                 "transition_in": {"type": "none"},
@@ -204,7 +204,8 @@ def make_gapless_segments(
         ]
 
     gapless[0]["start_s"] = 0.0
-    gapless[-1]["end_s"] = duration_rounded
+    # Force exact source duration coverage to satisfy semantic validation.
+    gapless[-1]["end_s"] = duration_exact
     return [seg for seg in gapless if seg["end_s"] > seg["start_s"]]
 
 
@@ -240,7 +241,7 @@ def default_keep_plan(
         "segments": [
             {
                 "start_s": 0.0,
-                "end_s": round(duration_s, 2),
+                "end_s": round(duration_s, 3),
                 "action": "keep",
                 "speed": 1.0,
                 "transition_in": {"type": "none"},
@@ -259,7 +260,7 @@ def default_keep_plan(
             "enabled": False,
             "mood": "none",
             "start_s": 0,
-            "end_s": round(duration_s, 2),
+            "end_s": round(duration_s, 3),
             "volume": 0.15,
             "duck_under_speech": True,
         },

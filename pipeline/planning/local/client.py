@@ -28,12 +28,18 @@ def request_plan(
     submit_endpoint = f"{base}/jobs/plan"
     submit_resp = _request_json("POST", submit_endpoint, timeout_s, json=payload)
     job_id = submit_resp["job_id"]
+    print(f"[API] submitted job_id={job_id}")
 
     start = time.monotonic()
     status_endpoint = f"{base}/jobs/{job_id}"
+    last_status: str | None = None
     while True:
         status_resp = _request_json("GET", status_endpoint, timeout_s)
         status = status_resp.get("status")
+        if status != last_status:
+            elapsed = time.monotonic() - start
+            print(f"[API] job_id={job_id} status={status} elapsed={elapsed:.1f}s")
+            last_status = status
         if status == "completed":
             result = status_resp.get("result")
             if result is None:

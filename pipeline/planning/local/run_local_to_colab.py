@@ -17,6 +17,48 @@ from pipeline.render.render import render
 from pipeline.render.validate_plan import validate_plan
 
 
+def _print_plan_metrics(
+    response: dict[str, Any],
+    final_plan: dict[str, Any],
+    source_meta: dict[str, Any],
+) -> None:
+    segments = final_plan.get("segments", [])
+    keep_duration = 0.0
+    cut_duration = 0.0
+    keep_count = 0
+    cut_count = 0
+    for seg in segments:
+        start_s = float(seg.get("start_s", 0.0))
+        end_s = float(seg.get("end_s", 0.0))
+        dur = max(0.0, end_s - start_s)
+        if seg.get("action") == "cut":
+            cut_count += 1
+            cut_duration += dur
+        else:
+            keep_count += 1
+            keep_duration += dur
+
+    coverage_end = float(segments[-1]["end_s"]) if segments else 0.0
+    duration_s = float(source_meta["duration_s"])
+    coverage_delta = coverage_end - duration_s
+    warnings = response.get("warnings", [])
+    print("\n=== Planning Metrics ===")
+    print(f"pass1_events={len(response.get('timeline_events', []))}")
+    print(f"segments_total={len(segments)} keep={keep_count} cut={cut_count}")
+    print(f"duration_keep_s={keep_duration:.3f} duration_cut_s={cut_duration:.3f}")
+    print(f"coverage_end_s={coverage_end:.3f} source_duration_s={duration_s:.3f} delta_s={coverage_delta:+.3f}")
+    print(
+        f"zooms={len(final_plan.get('zooms', []))} overlays={len(final_plan.get('overlays', []))} "
+        f"text_overlays={len(final_plan.get('text_overlays', []))}"
+    )
+    print(f"caption_words={len(final_plan.get('captions', {}).get('words', []))}")
+    if warnings:
+        print(f"warnings={warnings}")
+    else:
+        print("warnings=[]")
+    print("========================\n")
+
+
 def build_request_payload(
     *,
     run_id: str,
@@ -150,11 +192,21 @@ def main() -> int:
 
     response = request_plan(args.colab_url, payload)
     final_plan = response["final_edit_plan"]
-    validate_plan(final_plan)
+    _print_plan_metrics(response, final_plan, source_meta)
 
     args.output_plan.parent.mkdir(parents=True, exist_ok=True)
     with args.output_plan.open("w", encoding="utf-8") as f:
         json.dump(final_plan, f, indent=2)
+
+    validation_error: str | None = None
+    try:
+        validate_plan(final_plan)
+        print("Validation: OK")
+    except Exception as exc:
+        validation_error = str(exc)
+        print("Validation: INVALID")
+        print(f"Reason: {validation_error}")
+        print(f"Saved invalid plan to: {args.output_plan}")
 
     write_run_artifacts(
         run_dir,
@@ -163,8 +215,15 @@ def main() -> int:
             "response": response,
             "source_meta": source_meta,
             "transcript_words": transcript_words,
+            "validation": {
+                "valid": validation_error is None,
+                "error": validation_error,
+            },
         },
     )
+
+    if validation_error is not None:
+        return 1
 
     if args.render_out:
         args.render_out.parent.mkdir(parents=True, exist_ok=True)
