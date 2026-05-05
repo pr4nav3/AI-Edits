@@ -74,7 +74,9 @@ uvicorn pipeline.planning.colab_api.app:app --host 0.0.0.0 --port 8000
 You should now have:
 - `GET /health`
 - `GET /model-status`
-- `POST /plan`
+- `POST /warmup`
+- `POST /jobs/plan`
+- `GET /jobs/{job_id}`
 
 ### 6) Expose Colab server
 
@@ -101,10 +103,33 @@ From local terminal:
 ```bash
 curl -s https://your-colab-endpoint/health
 curl -s https://your-colab-endpoint/model-status
+curl -s -X POST https://your-colab-endpoint/warmup
 ```
 
 `/model-status` returns whether model weights already exist in cache.  
-If `exists=false`, the first `/plan` call will download/load into `QWEN_CACHE_DIR`.
+If `exists=false`, call `/warmup` once so model download/load happens before first job submission.
+
+### 8) Submit and poll a job (timeout-safe path)
+
+Submit:
+
+```bash
+curl -s -X POST https://your-colab-endpoint/jobs/plan \
+  -H "Content-Type: application/json" \
+  -d @request.json
+```
+
+Poll:
+
+```bash
+curl -s https://your-colab-endpoint/jobs/<job_id>
+```
+
+Job statuses:
+- `queued`
+- `running`
+- `completed` (contains `result`)
+- `failed` (contains `error`)
 
 ## Run local orchestration
 
@@ -146,7 +171,7 @@ This follows Qwen cookbook behavior:
 
 ## Pass 1 and Pass 2 outputs from server
 
-`POST /plan` now returns both raw model outputs for debugging:
+Completed job `result` returns both raw model outputs for debugging:
 - `pass1_raw_response` (direct text from timeline pass)
 - `timeline_events` (validated parsed events)
 - `pass2_raw_response` (direct text from edit-plan pass)
@@ -154,6 +179,19 @@ This follows Qwen cookbook behavior:
 - `final_edit_plan`
 
 This is useful for quickly seeing what Pass 1 generated versus what was accepted by validation.
+
+## Tunnel + timeout troubleshooting
+
+- Running `uvicorn` and `cloudflared` in parallel is valid.
+- `524` from Cloudflare usually means a request took too long.
+- Call `POST /warmup` before first inference request.
+- Use `POST /jobs/plan` + `GET /jobs/{job_id}` to avoid long-held HTTP connections.
+- In video-path mode, server returns explicit `400` if Colab cannot find `--colab-video-path`.
+
+## In-memory job caveat
+
+- Job data is stored in process memory only.
+- Restarting Colab runtime or uvicorn clears all queued/running/completed jobs.
 
 ## Video path behavior (important)
 
@@ -167,7 +205,7 @@ This is useful for quickly seeing what Pass 1 generated versus what was accepted
 1. **Refactor notebook logic into shared modules**  
    Shared helpers now live in `pipeline/planning/shared/`.
 2. **Stand up minimal Colab FastAPI endpoint**  
-   `pipeline/planning/colab_api/app.py` exposes `/plan`.
+   `pipeline/planning/colab_api/app.py` exposes async job endpoints.
 3. **Wire local orchestrator -> Colab -> validate+render**  
    `pipeline/planning/local/run_local_to_colab.py` handles this flow.
 4. **Support baseline video and frame-array transport**  

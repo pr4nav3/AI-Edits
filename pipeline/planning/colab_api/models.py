@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
@@ -41,4 +42,22 @@ class PlanResponse(BaseModel):
     model_plan_raw: dict[str, Any]
     final_edit_plan: dict[str, Any]
     warnings: list[str] = Field(default_factory=list)
+
+
+JobStatus = Literal["queued", "running", "completed", "failed"]
+
+
+class PlanJobSubmitResponse(BaseModel):
+    job_id: str
+    status: JobStatus
+    created_at: datetime
+
+
+class PlanJobStatusResponse(BaseModel):
+    job_id: str
+    status: JobStatus
+    created_at: datetime
+    updated_at: datetime
+    error: str | None = None
+    result: PlanResponse | None = None
 

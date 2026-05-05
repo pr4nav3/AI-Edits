@@ -96,6 +96,17 @@ class QwenPlannerEngine:
             "mode": "hf_cache_dir",
         }
 
+    def warmup(self) -> dict[str, Any]:
+        """
+        Force-load model and processor before first /plan request.
+        """
+        self._ensure_loaded()
+        return {
+            "loaded": True,
+            "model_name": self.config.model_name,
+            "cache_dir": self.config.cache_dir,
+        }
+
     def _decode_frames(self, frame_items: list[dict[str, Any]]) -> list[Image.Image]:
         images: list[Image.Image] = []
         for item in frame_items:
