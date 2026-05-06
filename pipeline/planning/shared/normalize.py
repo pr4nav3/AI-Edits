@@ -13,6 +13,24 @@ ALLOWED_CAPTION_POSITIONS = {
     "bottom_right",
 }
 ALLOWED_CAPTION_GROUPINGS = {"word_by_word", "phrase", "sentence"}
+ALLOWED_OVERLAY_POSITIONS = {
+    "fullscreen",
+    "picture_in_picture",
+    "left_third",
+    "right_third",
+    "top_half",
+    "bottom_half",
+    "corner_tr",
+    "corner_tl",
+    "corner_br",
+    "corner_bl",
+}
+OVERLAY_POSITION_ALIASES = {
+    "top_right": "corner_tr",
+    "top_left": "corner_tl",
+    "bottom_right": "corner_br",
+    "bottom_left": "corner_bl",
+}
 
 
 def extract_json_object(text: str) -> dict[str, Any]:
@@ -236,6 +254,20 @@ def filter_timed_items(items: list[dict[str, Any]], duration_s: float) -> list[d
     return cleaned
 
 
+def filter_overlays(items: list[dict[str, Any]], duration_s: float) -> list[dict[str, Any]]:
+    cleaned = filter_timed_items(items, duration_s)
+    out: list[dict[str, Any]] = []
+    for item in cleaned:
+        overlay = dict(item)
+        raw_position = str(overlay.get("position", "")).strip().lower()
+        normalized_position = OVERLAY_POSITION_ALIASES.get(raw_position, raw_position)
+        if normalized_position not in ALLOWED_OVERLAY_POSITIONS:
+            normalized_position = "picture_in_picture"
+        overlay["position"] = normalized_position
+        out.append(overlay)
+    return out
+
+
 def _normalized_word(text: str) -> str:
     token = re.sub(r"[^\w']+", "", str(text).lower())
     return token.strip()
@@ -457,7 +489,7 @@ def build_final_plan(
         "segments": make_gapless_segments(model_plan.get("segments", []), duration_s),
         "captions": _build_output_captions(model_captions),
         "zooms": filter_timed_items(model_plan.get("zooms", []), duration_s),
-        "overlays": filter_timed_items(model_plan.get("overlays", []), duration_s),
+        "overlays": filter_overlays(model_plan.get("overlays", []), duration_s),
         "text_overlays": filter_timed_items(model_plan.get("text_overlays", []), duration_s),
         "music": model_plan.get("music")
         or {

@@ -7,3 +7,5 @@ __pycache__/
 output_videos/
 # locally stored input videos
 renderer/public/
+# runs
+pipeline/planning/runs/

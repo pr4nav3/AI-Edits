@@ -1,0 +1,540 @@
+{
+  "source_video": {
+    "duration_s": 36.468,
+    "width": 1080,
+    "height": 1920,
+    "fps": 30.0
+  },
+  "segments": [
+    {
+      "start_s": 0.0,
+      "end_s": 7.0,
+      "action": "keep",
+      "speed": 1.0,
+      "transition_in": {
+        "type": "none"
+      }
+    },
+    {
+      "start_s": 7.0,
+      "end_s": 15.0,
+      "action": "keep",
+      "speed": 1.0,
+      "transition_in": {
+        "type": "none"
+      }
+    },
+    {
+      "start_s": 15.0,
+      "end_s": 25.0,
+      "action": "keep",
+      "speed": 1.0,
+      "transition_in": {
+        "type": "none"
+      }
+    },
+    {
+      "start_s": 25.0,
+      "end_s": 36.0,
+      "action": "keep",
+      "speed": 1.0,
+      "transition_in": {
+        "type": "none"
+      }
+    },
+    {
+      "start_s": 36.0,
+      "end_s": 36.468,
+      "action": "keep",
+      "speed": 1.0,
+      "transition_in": {
+        "type": "none"
+      }
+    }
+  ],
+  "captions": {
+    "enabled": true,
+    "position": "bottom_center",
+    "grouping": "sentence",
+    "words": [
+      {
+        "word": "Recently,",
+        "start_s": 0.54,
+        "end_s": 1.06
+      },
+      {
+        "word": "over",
+        "start_s": 1.38,
+        "end_s": 1.5
+      },
+      {
+        "word": "spring",
+        "start_s": 1.5,
+        "end_s": 1.76
+      },
+      {
+        "word": "break,",
+        "start_s": 1.76,
+        "end_s": 2.02
+      },
+      {
+        "word": "I",
+        "start_s": 2.44,
+        "end_s": 2.54
+      },
+      {
+        "word": "went",
+        "start_s": 2.54,
+        "end_s": 2.82
+      },
+      {
+        "word": "to",
+        "start_s": 2.82,
+        "end_s": 3.02
+      },
+      {
+        "word": "Puerto",
+        "start_s": 3.02,
+        "end_s": 3.16
+      },
+      {
+        "word": "Rico",
+        "start_s": 3.16,
+        "end_s": 3.6
+      },
+      {
+        "word": "with",
+        "start_s": 3.6,
+        "end_s": 3.82
+      },
+      {
+        "word": "my",
+        "start_s": 3.82,
+        "end_s": 3.94
+      },
+      {
+        "word": "friends",
+        "start_s": 3.94,
+        "end_s": 4.24
+      },
+      {
+        "word": "and",
+        "start_s": 4.24,
+        "end_s": 5.34,
+        "emphasis": "bold"
+      },
+      {
+        "word": "I",
+        "start_s": 5.34,
+        "end_s": 6.06
+      },
+      {
+        "word": "really",
+        "start_s": 6.06,
+        "end_s": 6.4
+      },
+      {
+        "word": "liked",
+        "start_s": 6.4,
+        "end_s": 6.72
+      },
+      {
+        "word": "Puerto",
+        "start_s": 6.72,
+        "end_s": 6.96
+      },
+      {
+        "word": "Rico.",
+        "start_s": 6.96,
+        "end_s": 7.34
+      },
+      {
+        "word": "I",
+        "start_s": 9.72,
+        "end_s": 10.24
+      },
+      {
+        "word": "went",
+        "start_s": 10.24,
+        "end_s": 10.44
+      },
+      {
+        "word": "to",
+        "start_s": 10.44,
+        "end_s": 10.64
+      },
+      {
+        "word": "the",
+        "start_s": 10.64,
+        "end_s": 10.74
+      },
+      {
+        "word": "beach",
+        "start_s": 10.74,
+        "end_s": 11.1
+      },
+      {
+        "word": "quite",
+        "start_s": 11.1,
+        "end_s": 11.72
+      },
+      {
+        "word": "often.",
+        "start_s": 11.72,
+        "end_s": 12.36,
+        "emphasis": "highlight"
+      },
+      {
+        "word": "The",
+        "start_s": 14.62,
+        "end_s": 15.14
+      },
+      {
+        "word": "beach",
+        "start_s": 15.14,
+        "end_s": 15.36
+      },
+      {
+        "word": "is",
+        "start_s": 15.36,
+        "end_s": 15.52
+      },
+      {
+        "word": "good",
+        "start_s": 15.52,
+        "end_s": 15.74
+      },
+      {
+        "word": "but",
+        "start_s": 15.74,
+        "end_s": 16.3
+      },
+      {
+        "word": "it",
+        "start_s": 16.3,
+        "end_s": 16.76
+      },
+      {
+        "word": "also",
+        "start_s": 16.76,
+        "end_s": 17.1
+      },
+      {
+        "word": "makes",
+        "start_s": 17.1,
+        "end_s": 17.36
+      },
+      {
+        "word": "you",
+        "start_s": 17.36,
+        "end_s": 17.56
+      },
+      {
+        "word": "very",
+        "start_s": 17.56,
+        "end_s": 17.76
+      },
+      {
+        "word": "sandy",
+        "start_s": 17.76,
+        "end_s": 18.06
+      },
+      {
+        "word": "and",
+        "start_s": 18.06,
+        "end_s": 18.28
+      },
+      {
+        "word": "very",
+        "start_s": 18.28,
+        "end_s": 18.46
+      },
+      {
+        "word": "wet.",
+        "start_s": 18.46,
+        "end_s": 18.64
+      },
+      {
+        "word": "So",
+        "start_s": 19.12,
+        "end_s": 19.14
+      },
+      {
+        "word": "you",
+        "start_s": 19.14,
+        "end_s": 19.72
+      },
+      {
+        "word": "know",
+        "start_s": 19.72,
+        "end_s": 19.8
+      },
+      {
+        "word": "you",
+        "start_s": 19.8,
+        "end_s": 19.94
+      },
+      {
+        "word": "got",
+        "start_s": 19.94,
+        "end_s": 20.06
+      },
+      {
+        "word": "to",
+        "start_s": 20.06,
+        "end_s": 20.18
+      },
+      {
+        "word": "plan",
+        "start_s": 20.18,
+        "end_s": 20.48
+      },
+      {
+        "word": "your",
+        "start_s": 20.48,
+        "end_s": 20.7
+      },
+      {
+        "word": "showers",
+        "start_s": 20.7,
+        "end_s": 21.04
+      },
+      {
+        "word": "and",
+        "start_s": 21.04,
+        "end_s": 21.4
+      },
+      {
+        "word": "you",
+        "start_s": 21.4,
+        "end_s": 21.92
+      },
+      {
+        "word": "just",
+        "start_s": 21.92,
+        "end_s": 22.02
+      },
+      {
+        "word": "take",
+        "start_s": 22.02,
+        "end_s": 22.26
+      },
+      {
+        "word": "clean",
+        "start_s": 22.26,
+        "end_s": 22.54
+      },
+      {
+        "word": "but",
+        "start_s": 22.54,
+        "end_s": 23.1
+      },
+      {
+        "word": "the",
+        "start_s": 23.1,
+        "end_s": 23.28
+      },
+      {
+        "word": "waves",
+        "start_s": 23.28,
+        "end_s": 23.5
+      },
+      {
+        "word": "were",
+        "start_s": 23.5,
+        "end_s": 23.72
+      },
+      {
+        "word": "very",
+        "start_s": 23.72,
+        "end_s": 23.98
+      },
+      {
+        "word": "nice",
+        "start_s": 23.98,
+        "end_s": 24.22
+      },
+      {
+        "word": "it",
+        "start_s": 24.22,
+        "end_s": 24.42
+      },
+      {
+        "word": "was",
+        "start_s": 24.42,
+        "end_s": 24.52
+      },
+      {
+        "word": "very",
+        "start_s": 24.52,
+        "end_s": 24.7
+      },
+      {
+        "word": "beautiful.",
+        "start_s": 24.7,
+        "end_s": 25.04
+      },
+      {
+        "word": "Another",
+        "start_s": 25.82,
+        "end_s": 26.08
+      },
+      {
+        "word": "thing",
+        "start_s": 26.08,
+        "end_s": 26.28
+      },
+      {
+        "word": "I",
+        "start_s": 26.28,
+        "end_s": 26.4
+      },
+      {
+        "word": "did",
+        "start_s": 26.4,
+        "end_s": 26.58
+      },
+      {
+        "word": "was",
+        "start_s": 26.58,
+        "end_s": 26.86
+      },
+      {
+        "word": "I",
+        "start_s": 26.86,
+        "end_s": 27.26
+      },
+      {
+        "word": "ended",
+        "start_s": 27.26,
+        "end_s": 27.4
+      },
+      {
+        "word": "up",
+        "start_s": 27.4,
+        "end_s": 27.56
+      },
+      {
+        "word": "getting",
+        "start_s": 27.56,
+        "end_s": 27.74
+      },
+      {
+        "word": "this",
+        "start_s": 27.74,
+        "end_s": 28.7
+      },
+      {
+        "word": "bracelet",
+        "start_s": 28.7,
+        "end_s": 29.22
+      },
+      {
+        "word": "as",
+        "start_s": 29.22,
+        "end_s": 29.64
+      },
+      {
+        "word": "a",
+        "start_s": 29.64,
+        "end_s": 29.74
+      },
+      {
+        "word": "gift",
+        "start_s": 29.74,
+        "end_s": 30.02
+      },
+      {
+        "word": "from",
+        "start_s": 30.02,
+        "end_s": 30.76
+      },
+      {
+        "word": "Puerto",
+        "start_s": 30.76,
+        "end_s": 30.96
+      },
+      {
+        "word": "Rico",
+        "start_s": 30.96,
+        "end_s": 31.26
+      },
+      {
+        "word": "and",
+        "start_s": 31.26,
+        "end_s": 32.44
+      },
+      {
+        "word": "it's",
+        "start_s": 32.44,
+        "end_s": 33.16
+      },
+      {
+        "word": "very",
+        "start_s": 33.16,
+        "end_s": 33.3
+      },
+      {
+        "word": "pretty.",
+        "start_s": 33.3,
+        "end_s": 33.56
+      },
+      {
+        "word": "Looks",
+        "start_s": 33.8,
+        "end_s": 34.0
+      },
+      {
+        "word": "very",
+        "start_s": 34.0,
+        "end_s": 34.18
+      },
+      {
+        "word": "good.",
+        "start_s": 34.18,
+        "end_s": 34.36
+      }
+    ]
+  },
+  "zooms": [
+    {
+      "start_s": 25.0,
+      "end_s": 36.0,
+      "scale": 1.2,
+      "anchor": "face",
+      "easing": "ease_in_out"
+    }
+  ],
+  "overlays": [
+    {
+      "start_s": 25.0,
+      "end_s": 36.0,
+      "image_query": "black beaded bracelet",
+      "position": "bottom_right",
+      "animation": "fade_in"
+    }
+  ],
+  "text_overlays": [
+    {
+      "start_s": 25.0,
+      "end_s": 36.0,
+      "text": "Gift from Puerto Rico",
+      "position": "bottom_right",
+      "style": "callout",
+      "animation": "fade_in"
+    }
+  ],
+  "music": {
+    "enabled": true,
+    "mood": "chill",
+    "start_s": 0,
+    "end_s": 36.0,
+    "volume": 0.3,
+    "duck_under_speech": true
+  },
+  "reframe": {
+    "enabled": true,
+    "target_aspect_ratio": "9:16",
+    "focus": "face_track"
+  }
+}
