@@ -5,6 +5,14 @@ import re
 from typing import Any
 
 ALLOWED_EMPHASIS = {"none", "highlight", "bold", "color_pop"}
+ALLOWED_CAPTION_POSITIONS = {
+    "bottom_center",
+    "top_center",
+    "center",
+    "bottom_left",
+    "bottom_right",
+}
+ALLOWED_CAPTION_GROUPINGS = {"word_by_word", "phrase", "sentence"}
 
 
 def extract_json_object(text: str) -> dict[str, Any]:
@@ -272,6 +280,28 @@ def _coerce_model_caption_words(words: list[dict[str, Any]] | None) -> list[dict
     return cleaned
 
 
+def _build_output_captions(model_captions: dict[str, Any] | None) -> dict[str, Any]:
+    base: dict[str, Any] = {
+        "enabled": True,
+    }
+    if not isinstance(model_captions, dict):
+        return base
+
+    enabled = model_captions.get("enabled")
+    if isinstance(enabled, bool):
+        base["enabled"] = enabled
+
+    position = model_captions.get("position")
+    if position in ALLOWED_CAPTION_POSITIONS:
+        base["position"] = position
+
+    grouping = model_captions.get("grouping")
+    if grouping in ALLOWED_CAPTION_GROUPINGS:
+        base["grouping"] = grouping
+
+    return base
+
+
 def merge_caption_decisions_with_whisper(
     whisper_words: list[dict[str, Any]],
     model_captions: dict[str, Any] | None,
@@ -425,13 +455,7 @@ def build_final_plan(
             "fps": source_meta["fps"],
         },
         "segments": make_gapless_segments(model_plan.get("segments", []), duration_s),
-        "captions": model_captions
-        or {
-            "enabled": True,
-            "position": "bottom_center",
-            "grouping": "phrase",
-            "words": [],
-        },
+        "captions": _build_output_captions(model_captions),
         "zooms": filter_timed_items(model_plan.get("zooms", []), duration_s),
         "overlays": filter_timed_items(model_plan.get("overlays", []), duration_s),
         "text_overlays": filter_timed_items(model_plan.get("text_overlays", []), duration_s),
@@ -452,17 +476,16 @@ def build_final_plan(
         },
     }
 
-    plan["captions"].setdefault("enabled", True)
-
     # Whisper timings are authoritative; model can still contribute creative decisions
     # (emphasis/selection) through merge_caption_decisions_with_whisper().
     if caption_words is not None:
         plan["captions"]["words"] = merge_caption_decisions_with_whisper(
             caption_words,
-            plan["captions"],
+            model_captions,
         )
     else:
-        plan["captions"]["words"] = _coerce_caption_words(plan["captions"].get("words"))
+        model_words = model_captions.get("words") if isinstance(model_captions, dict) else None
+        plan["captions"]["words"] = _coerce_caption_words(model_words)
 
     plan["music"].setdefault("enabled", False)
     plan["music"].setdefault("mood", "none")

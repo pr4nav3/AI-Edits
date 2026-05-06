@@ -44,7 +44,7 @@ class PlanResponse(BaseModel):
     warnings: list[str] = Field(default_factory=list)
 
 
-JobStatus = Literal["queued", "running", "completed", "failed"]
+JobStatus = Literal["queued", "running", "completed", "failed", "cancelled"]
 
 
 class PlanJobSubmitResponse(BaseModel):

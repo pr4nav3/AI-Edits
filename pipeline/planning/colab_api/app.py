@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import threading
+import traceback
 from datetime import datetime
 from pathlib import Path
 from uuid import uuid4
@@ -19,6 +20,10 @@ app = FastAPI(title="AI-Edits Colab Planner API", version="0.1.0")
 engine = build_engine_from_env()
 jobs: dict[str, PlanJobStatusResponse] = {}
 jobs_lock = threading.Lock()
+# Qwen/transformers inference is not thread-safe on a shared model instance.
+# Serialize generate() calls so abandoned local polls do not leave overlapping
+# server jobs fighting over the same GPU/model state.
+inference_lock = threading.Lock()
 
 
 def _now() -> datetime:
@@ -36,21 +41,24 @@ def _validate_video_path(request: PlanRequest) -> None:
 
 
 def _run_plan_job(job_id: str, request: PlanRequest) -> None:
-    with jobs_lock:
-        current = jobs[job_id]
-        current.status = "running"
-        current.updated_at = _now()
-        jobs[job_id] = current
-
     try:
-        (
-            pass1_raw_response,
-            timeline_events,
-            pass2_raw_response,
-            model_plan_raw,
-            final_edit_plan,
-            warnings,
-        ) = engine.generate(request)
+        with inference_lock:
+            with jobs_lock:
+                current = jobs[job_id]
+                if current.status == "cancelled":
+                    return
+                current.status = "running"
+                current.updated_at = _now()
+                jobs[job_id] = current
+
+            (
+                pass1_raw_response,
+                timeline_events,
+                pass2_raw_response,
+                model_plan_raw,
+                final_edit_plan,
+                warnings,
+            ) = engine.generate(request)
         result = PlanResponse(
             run_id=request.run_id,
             pass1_raw_response=pass1_raw_response,
@@ -67,11 +75,15 @@ def _run_plan_job(job_id: str, request: PlanRequest) -> None:
             current.result = result
             jobs[job_id] = current
     except Exception as exc:
+        error_text = f"{type(exc).__name__}: {exc}"
+        tb = traceback.format_exc()
+        if tb:
+            error_text = f"{error_text}\n{tb}"
         with jobs_lock:
             current = jobs[job_id]
             current.status = "failed"
             current.updated_at = _now()
-            current.error = str(exc)
+            current.error = error_text
             jobs[job_id] = current
 
 
@@ -120,4 +132,22 @@ def get_plan_job(job_id: str) -> PlanJobStatusResponse:
     if job is None:
         raise HTTPException(status_code=404, detail=f"Unknown job_id: {job_id}")
     return job
+
+
+@app.post("/jobs/{job_id}/cancel", response_model=PlanJobStatusResponse)
+def cancel_plan_job(job_id: str) -> PlanJobStatusResponse:
+    with jobs_lock:
+        job = jobs.get(job_id)
+        if job is None:
+            raise HTTPException(status_code=404, detail=f"Unknown job_id: {job_id}")
+        if job.status != "queued":
+            raise HTTPException(
+                status_code=409,
+                detail=f"Only queued jobs can be cancelled (current status={job.status})",
+            )
+        job.status = "cancelled"
+        job.updated_at = _now()
+        job.error = "Cancelled by user"
+        jobs[job_id] = job
+        return job
 

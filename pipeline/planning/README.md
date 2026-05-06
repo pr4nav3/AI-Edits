@@ -77,6 +77,7 @@ You should now have:
 - `POST /warmup`
 - `POST /jobs/plan`
 - `GET /jobs/{job_id}`
+- `POST /jobs/{job_id}/cancel` (queued jobs only)
 
 ### 6) Expose Colab server
 
@@ -130,6 +131,7 @@ Job statuses:
 - `running`
 - `completed` (contains `result`)
 - `failed` (contains `error`)
+- `cancelled` (cancelled before running)
 
 ## Run local orchestration
 
