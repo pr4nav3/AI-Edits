@@ -9,3 +9,5 @@ output_videos/
 renderer/public/
 # runs
 pipeline/planning/runs/
+# edit plans
+edit_plans/

@@ -510,7 +510,7 @@
       "start_s": 25.0,
       "end_s": 36.0,
       "image_query": "black beaded bracelet",
-      "position": "bottom_right",
+      "position": "corner_br",
       "animation": "fade_in"
     }
   ],
