@@ -109,6 +109,32 @@ export function sourceTimeToOutputSeconds(
 }
 
 /**
+ * Variant for range end-times.
+ * Accepts source times on keep/cut boundaries (or exact video end) by nudging
+ * slightly backward so overlays/music/captions don't disappear at boundaries.
+ */
+export function sourceTimeToOutputSecondsForRangeEnd(
+  plan: EditPlan,
+  sourceT: number,
+  timeline?: OutputTimeline,
+): number | null {
+  const tl = timeline ?? buildOutputTimeline(plan);
+  const direct = sourceTimeToOutputSeconds(plan, sourceT, tl);
+  if (direct !== null) return direct;
+
+  if (tl.outputSegments.length === 0) return null;
+
+  const duration = plan.source_video.duration_s;
+  const eps = 1e-4;
+  if (sourceT >= duration - eps) {
+    return tl.totalDurationSeconds;
+  }
+
+  const back = Math.max(0, sourceT - eps);
+  return sourceTimeToOutputSeconds(plan, back, tl);
+}
+
+/**
  * Inverse: output time → source time.
  * In transition overlap windows, prefers the later segment (matches on-screen "incoming" clip).
  */

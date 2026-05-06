@@ -4,7 +4,10 @@ import React, { useMemo } from "react";
 import { AbsoluteFill, Sequence, useCurrentFrame, useVideoConfig } from "remotion";
 import type { EditPlan } from "../types/editPlan";
 import type { CaptionWord } from "../types/editPlan";
-import { sourceTimeToOutputSeconds } from "../lib/timeMap";
+import {
+  sourceTimeToOutputSeconds,
+  sourceTimeToOutputSecondsForRangeEnd,
+} from "../lib/timeMap";
 import type { OutputTimeline } from "../lib/timeMap";
 
 const PHRASE_COMBINE_MS = 450;
@@ -115,28 +118,52 @@ function positionStyle(
   position: NonNullable<EditPlan["captions"]["position"]> | undefined,
 ): React.CSSProperties {
   const p = position ?? "bottom_center";
+  /** Horizontal inset so captions stay inside frame after reframe / rounding. */
   const base: React.CSSProperties = {
     display: "flex",
+    flexDirection: "column",
     justifyContent: "center",
+    alignItems: "center",
     width: "100%",
-    padding: "5%",
+    height: "100%",
+    padding: "4% 6%",
+    boxSizing: "border-box",
     pointerEvents: "none",
   };
   if (p === "bottom_center")
-    return { ...base, alignItems: "flex-end", justifyContent: "center" };
+    return { ...base, justifyContent: "flex-end", alignItems: "center" };
   if (p === "top_center")
-    return { ...base, alignItems: "flex-start", justifyContent: "center" };
+    return { ...base, justifyContent: "flex-start", alignItems: "center" };
   if (p === "center")
     return { ...base, alignItems: "center", justifyContent: "center" };
   if (p === "bottom_left")
-    return { ...base, alignItems: "flex-end", justifyContent: "flex-start" };
-  return { ...base, alignItems: "flex-end", justifyContent: "flex-end" };
+    return { ...base, justifyContent: "flex-end", alignItems: "flex-start" };
+  return { ...base, justifyContent: "flex-end", alignItems: "flex-end" };
 }
 
 type Props = {
   editPlan: EditPlan;
   timeline: OutputTimeline;
 };
+
+type PageSchedule = {
+  pageIndex: number;
+  from: number;
+  durationInFrames: number;
+};
+
+/** Prevent overlapping Sequences (same output frame showing two caption pages). */
+function resolveNonOverlappingSchedules(schedules: PageSchedule[]): PageSchedule[] {
+  const sorted = [...schedules].sort((a, b) => a.from - b.from);
+  let cursor = 0;
+  return sorted.map((s) => {
+    const endExclusive = s.from + s.durationInFrames;
+    const from = Math.max(s.from, cursor);
+    const durationInFrames = Math.max(1, endExclusive - from);
+    cursor = from + durationInFrames;
+    return { ...s, from, durationInFrames };
+  });
+}
 
 export const CaptionsLayer: React.FC<Props> = ({ editPlan, timeline }) => {
   const frame = useCurrentFrame();
@@ -194,11 +221,42 @@ export const CaptionsLayer: React.FC<Props> = ({ editPlan, timeline }) => {
     return null;
   }
 
+  const rawSchedules: PageSchedule[] = [];
+  pages.forEach((page, idx) => {
+    const startOut = sourceTimeToOutputSeconds(
+      editPlan,
+      page.startMs / 1000,
+      timeline,
+    );
+    if (startOut === null) return;
+    const endOut = sourceTimeToOutputSeconds(
+      editPlan,
+      (page.startMs + page.durationMs) / 1000,
+      timeline,
+    );
+    const safeEndOut =
+      endOut ??
+      sourceTimeToOutputSecondsForRangeEnd(
+        editPlan,
+        (page.startMs + page.durationMs) / 1000,
+        timeline,
+      );
+    if (safeEndOut === null) return;
+    const from = Math.max(0, Math.floor(startOut * fps));
+    const endExclusive = Math.max(from + 1, Math.ceil(safeEndOut * fps));
+    const durationInFrames = endExclusive - from;
+    rawSchedules.push({ pageIndex: idx, from, durationInFrames });
+  });
+
+  const schedules = resolveNonOverlappingSchedules(rawSchedules);
+  const scheduleByPageIndex = new Map(schedules.map((s) => [s.pageIndex, s]));
+
   return (
     <AbsoluteFill style={positionStyle(captions.position)}>
       <div
         style={{
-          maxWidth: "92%",
+          width: "100%",
+          maxWidth: "100%",
           textAlign: "center",
           fontFamily: "system-ui, sans-serif",
           fontSize: 42,
@@ -206,25 +264,13 @@ export const CaptionsLayer: React.FC<Props> = ({ editPlan, timeline }) => {
           color: "#fff",
           textShadow: "0 2px 8px rgba(0,0,0,0.85)",
           lineHeight: 1.25,
-          whiteSpace: "normal",
+          boxSizing: "border-box",
         }}
       >
         {pages.map((page, idx) => {
-          const startOut = sourceTimeToOutputSeconds(
-            editPlan,
-            page.startMs / 1000,
-            timeline,
-          );
-          if (startOut === null) return null;
-          const endOut = sourceTimeToOutputSeconds(
-            editPlan,
-            (page.startMs + page.durationMs) / 1000,
-            timeline,
-          );
-          if (endOut === null) return null;
-          const from = Math.max(0, Math.floor(startOut * fps));
-          const to = Math.max(from + 1, Math.ceil(endOut * fps));
-          const durationInFrames = to - from;
+          const scheduled = scheduleByPageIndex.get(idx);
+          if (!scheduled) return null;
+          const { from, durationInFrames } = scheduled;
 
           const activeWord = page.tokens.find((tok) => {
             const a = sourceTimeToOutputSeconds(editPlan, tok.fromMs / 1000, timeline);
@@ -235,7 +281,18 @@ export const CaptionsLayer: React.FC<Props> = ({ editPlan, timeline }) => {
 
           return (
             <Sequence key={idx} from={from} durationInFrames={durationInFrames} layout="none">
-              <span>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  justifyContent: "center",
+                  alignContent: "center",
+                  columnGap: 8,
+                  rowGap: 6,
+                  width: "100%",
+                  maxWidth: "100%",
+                }}
+              >
                 {page.tokens.map((tok, ti) => {
                   const w = findWordForToken(wordsInKept, tok.text, tok.fromMs, tok.toMs);
                   const em = w?.emphasis ?? "none";
@@ -248,7 +305,8 @@ export const CaptionsLayer: React.FC<Props> = ({ editPlan, timeline }) => {
                       key={ti}
                       className={`${emphasisClass(em)} ${isActive ? "ae-caption-active" : ""}`}
                       style={{
-                        marginRight: 6,
+                        display: "inline-block",
+                        maxWidth: "100%",
                         padding: em === "highlight" ? "2px 8px" : undefined,
                         borderRadius: em === "highlight" ? 6 : undefined,
                         background:
@@ -265,13 +323,16 @@ export const CaptionsLayer: React.FC<Props> = ({ editPlan, timeline }) => {
                         textShadow: isActive
                           ? "0 0 12px rgba(255,255,255,0.95)"
                           : undefined,
+                        whiteSpace: "normal",
+                        overflowWrap: "anywhere",
+                        wordBreak: "break-word",
                       }}
                     >
                       {tok.text}
                     </span>
                   );
                 })}
-              </span>
+              </div>
             </Sequence>
           );
         })}

@@ -30,11 +30,11 @@ Decision object shape (all fields optional):
     "omit_indices": [13, 14],
     "words": [{"word": "token", "emphasis": "none" | "highlight" | "bold" | "color_pop", "omit": true}]
   },
-  "zooms": [{"start_s": number, "end_s": number, "scale": number, "anchor": "face" | "center" | "top_third" | "bottom_third" | "custom", "easing": "ease_in_out" | "ease_in" | "ease_out" | "linear" | "spring"}],
+  "zooms": [{"start_s": number, "end_s": number, "scale": number, "anchor": "top_left" | "top_center" | "top_right" | "center_left" | "center" | "center_right" | "bottom_left" | "bottom_center" | "bottom_right" | "custom", "anchor_xy": {"x": number, "y": number}, "easing": "ease_in_out" | "ease_in" | "ease_out" | "linear" | "spring"}],
   "overlays": [{"start_s": number, "end_s": number, "image_query": string, "position": "fullscreen" | "picture_in_picture" | "left_third" | "right_third" | "top_half" | "bottom_half" | "corner_tr" | "corner_tl" | "corner_br" | "corner_bl", "animation": "none" | "fade_in" | "slide_in_right" | "slide_in_left" | "slide_in_up" | "pop" | "scale_up"}],
   "text_overlays": [{"start_s": number, "end_s": number, "text": string, "position": "top_center" | "bottom_center" | "center" | "top_left" | "top_right" | "bottom_left" | "bottom_right", "style": "title_card" | "lower_third" | "callout" | "stat" | "label", "animation": "none" | "fade_in" | "typewriter" | "slide_in_up" | "pop"}],
   "music": {"enabled": boolean, "mood": "upbeat" | "chill" | "dramatic" | "corporate" | "playful" | "inspirational" | "dark" | "none", "start_s": number, "end_s": number, "volume": number, "duck_under_speech": boolean},
-  "reframe": {"enabled": boolean, "target_aspect_ratio": "16:9" | "9:16" | "1:1" | "4:5", "focus": "face_track" | "center" | "custom"}
+  "reframe": {"enabled": boolean, "target_aspect_ratio": "16:9" | "9:16" | "1:1" | "4:5", "focus": "center" | "custom"}
 }
 
 Caption rules:
@@ -43,6 +43,11 @@ Caption rules:
 - Do NOT invent caption start_s/end_s values.
 - Prefer sparse emphasis_by_index / omit_indices decisions.
 - Keep output concise.
+
+Zoom rules:
+- zooms[].anchor is a coarse 3x3 region (fallback when anchor_xy is omitted).
+- For a held object or precise subject, add anchor_xy: normalized (x,y) with (0,0)=top-left and (1,1)=bottom-right, placed on the subject's visual center. When anchor_xy is present, it overrides anchor for the zoom focal point so the punch-in stays on the subject.
+- Reframe focus is only "center" | "custom" (no tracking).
 """.strip()
 
 

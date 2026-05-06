@@ -2,7 +2,11 @@ import React, { useMemo } from "react";
 import { AbsoluteFill, Audio, Sequence, useCurrentFrame, useVideoConfig } from "remotion";
 import { staticFile } from "remotion";
 import type { EditPlan } from "../types/editPlan";
-import { outputTimeToSourceTime, sourceTimeToOutputSeconds } from "../lib/timeMap";
+import {
+  outputTimeToSourceTime,
+  sourceTimeToOutputSeconds,
+  sourceTimeToOutputSecondsForRangeEnd,
+} from "../lib/timeMap";
 import type { OutputTimeline } from "../lib/timeMap";
 
 type Props = {
@@ -36,7 +40,7 @@ export const MusicLayer: React.FC<Props> = ({ editPlan, timeline, musicSrc }) =>
   const startS = music.start_s ?? 0;
   const endS = music.end_s ?? editPlan.source_video.duration_s;
   const startOut = sourceTimeToOutputSeconds(editPlan, startS, timeline);
-  const endOut = sourceTimeToOutputSeconds(editPlan, endS, timeline);
+  const endOut = sourceTimeToOutputSecondsForRangeEnd(editPlan, endS, timeline);
   if (startOut === null || endOut === null) {
     return null;
   }

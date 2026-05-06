@@ -1,29 +1,45 @@
 import React from "react";
 import { AbsoluteFill, interpolate, Sequence, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import type { EditPlan, TextOverlay } from "../types/editPlan";
-import { sourceTimeToOutputSeconds } from "../lib/timeMap";
+import {
+  sourceTimeToOutputSeconds,
+  sourceTimeToOutputSecondsForRangeEnd,
+} from "../lib/timeMap";
 import type { OutputTimeline } from "../lib/timeMap";
+
+const SAFE_PAD = { vertical: "4%", horizontal: "6%" };
 
 function boxForPosition(position: TextOverlay["position"]): React.CSSProperties {
   const p = position ?? "top_center";
   const base: React.CSSProperties = {
     position: "absolute",
     padding: "12px 20px",
-    maxWidth: "88%",
+    maxWidth: "100%",
+    width: "max-content",
+    boxSizing: "border-box",
     textAlign: "center",
     fontFamily: "system-ui, sans-serif",
     color: "#fff",
     textShadow: "0 2px 10px rgba(0,0,0,0.75)",
+    overflowWrap: "break-word",
+    wordBreak: "break-word",
   };
-  if (p === "top_center") return { ...base, top: "6%", left: "50%", transform: "translateX(-50%)" };
+  if (p === "top_center")
+    return { ...base, top: SAFE_PAD.vertical, left: "50%", transform: "translateX(-50%)" };
   if (p === "bottom_center")
-    return { ...base, bottom: "10%", left: "50%", transform: "translateX(-50%)" };
+    return {
+      ...base,
+      bottom: SAFE_PAD.vertical,
+      left: "50%",
+      transform: "translateX(-50%)",
+    };
   if (p === "center")
     return { ...base, top: "50%", left: "50%", transform: "translate(-50%, -50%)" };
-  if (p === "top_left") return { ...base, top: "6%", left: "6%" };
-  if (p === "top_right") return { ...base, top: "6%", right: "6%" };
-  if (p === "bottom_left") return { ...base, bottom: "10%", left: "6%" };
-  return { ...base, bottom: "10%", right: "6%" };
+  if (p === "top_left") return { ...base, top: SAFE_PAD.vertical, left: 0, textAlign: "left" };
+  if (p === "top_right") return { ...base, top: SAFE_PAD.vertical, right: 0, textAlign: "right" };
+  if (p === "bottom_left")
+    return { ...base, bottom: SAFE_PAD.vertical, left: 0, textAlign: "left" };
+  return { ...base, bottom: SAFE_PAD.vertical, right: 0, textAlign: "right" };
 }
 
 function stylePreset(style: TextOverlay["style"]): React.CSSProperties {
@@ -90,19 +106,40 @@ export const TextOverlaysLayer: React.FC<Props> = ({
   const { fps } = useVideoConfig();
 
   return (
-    <AbsoluteFill>
+    <AbsoluteFill
+      style={{
+        padding: `${SAFE_PAD.vertical} ${SAFE_PAD.horizontal}`,
+        boxSizing: "border-box",
+        pointerEvents: "none",
+      }}
+    >
       {items.map((t, i) => {
         const startOut = sourceTimeToOutputSeconds(editPlan, t.start_s, timeline);
-        const endOut = sourceTimeToOutputSeconds(editPlan, t.end_s, timeline);
+        const endOut = sourceTimeToOutputSecondsForRangeEnd(editPlan, t.end_s, timeline);
         if (startOut === null || endOut === null) return null;
         const from = Math.max(0, Math.floor(startOut * fps));
         const to = Math.max(from + 1, Math.ceil(endOut * fps));
         const durationInFrames = to - from;
         const frameInSeq = frame - from;
         const anim = enterStyle(t.animation, frameInSeq, fps);
+        const baseBox = boxForPosition(t.position);
+        const baseTransform = baseBox.transform;
+        const animTransform = anim.transform;
+        const transform =
+          baseTransform && animTransform
+            ? `${baseTransform} ${animTransform}`
+            : (animTransform ?? baseTransform);
         return (
           <Sequence key={i} from={from} durationInFrames={durationInFrames} layout="none">
-            <div style={{ ...boxForPosition(t.position), ...stylePreset(t.style), ...anim }}>
+            <div
+              style={{
+                ...baseBox,
+                ...stylePreset(t.style),
+                ...anim,
+                transform,
+                maxWidth: "min(100%, 52rem)",
+              }}
+            >
               {t.text}
             </div>
           </Sequence>

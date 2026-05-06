@@ -146,13 +146,26 @@
           },
           "anchor": {
             "type": "string",
-            "enum": ["face", "center", "top_third", "bottom_third", "custom"],
-            "default": "face",
-            "description": "What the zoom focuses on. 'face' = center on detected face (most common for talking-head). 'center' = geometric center of frame."
+            "enum": [
+              "top_left",
+              "top_center",
+              "top_right",
+              "center_left",
+              "center",
+              "center_right",
+              "bottom_left",
+              "bottom_center",
+              "bottom_right",
+              "custom"
+            ],
+            "default": "center",
+            "description": "Coarse region for the zoom transform origin (3x3 grid). When anchor_xy is also set, anchor_xy wins so the focal point can sit anywhere in frame (e.g. center of a held object). 'custom' without anchor_xy falls back to frame center."
           },
           "anchor_xy": {
             "type": "object",
-            "description": "Custom anchor point as normalized coordinates. Only used when anchor='custom'.",
+            "description": "Optional precise focal point in normalized frame coordinates (0,0)=top-left, (1,1)=bottom-right. Place at the visual center of the subject to zoom without cropping it out. When present, overrides the grid anchor.",
+            "required": ["x", "y"],
+            "additionalProperties": false,
             "properties": {
               "x": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
               "y": { "type": "number", "minimum": 0.0, "maximum": 1.0 }
@@ -299,9 +312,9 @@
         },
         "focus": {
           "type": "string",
-          "enum": ["face_track", "center", "custom"],
-          "default": "face_track",
-          "description": "How to position the crop. 'face_track' = keep the face centered as it moves."
+          "enum": ["center", "custom"],
+          "default": "center",
+          "description": "How to position the crop for reframe. 'center' = geometric center of source (symmetric crop). 'custom' reserved for future precise crop positioning."
         }
       }
     }

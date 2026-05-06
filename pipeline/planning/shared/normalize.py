@@ -31,6 +31,26 @@ OVERLAY_POSITION_ALIASES = {
     "bottom_right": "corner_br",
     "bottom_left": "corner_bl",
 }
+ALLOWED_REFRAME_FOCUS = frozenset({"center", "custom"})
+ALLOWED_ZOOM_ANCHORS = frozenset(
+    {
+        "top_left",
+        "top_center",
+        "top_right",
+        "center_left",
+        "center",
+        "center_right",
+        "bottom_left",
+        "bottom_center",
+        "bottom_right",
+        "custom",
+    }
+)
+ZOOM_ANCHOR_ALIASES = {
+    "face": "center",
+    "top_third": "top_center",
+    "bottom_third": "bottom_center",
+}
 
 
 def extract_json_object(text: str) -> dict[str, Any]:
@@ -254,6 +274,38 @@ def filter_timed_items(items: list[dict[str, Any]], duration_s: float) -> list[d
     return cleaned
 
 
+def _coerce_anchor_xy(raw: Any) -> dict[str, float] | None:
+    if not isinstance(raw, dict):
+        return None
+    try:
+        x = float(raw["x"])
+        y = float(raw["y"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    x = max(0.0, min(1.0, x))
+    y = max(0.0, min(1.0, y))
+    return {"x": round(x, 4), "y": round(y, 4)}
+
+
+def filter_zooms(items: list[dict[str, Any]], duration_s: float) -> list[dict[str, Any]]:
+    cleaned = filter_timed_items(items, duration_s)
+    out: list[dict[str, Any]] = []
+    for raw in cleaned:
+        z = dict(raw)
+        anchor_key = str(z.get("anchor", "center")).strip().lower()
+        anchor = ZOOM_ANCHOR_ALIASES.get(anchor_key, anchor_key)
+        if anchor not in ALLOWED_ZOOM_ANCHORS:
+            anchor = "center"
+        z["anchor"] = anchor
+        xy = _coerce_anchor_xy(z.get("anchor_xy"))
+        if xy:
+            z["anchor_xy"] = xy
+        else:
+            z.pop("anchor_xy", None)
+        out.append(z)
+    return out
+
+
 def filter_overlays(items: list[dict[str, Any]], duration_s: float) -> list[dict[str, Any]]:
     cleaned = filter_timed_items(items, duration_s)
     out: list[dict[str, Any]] = []
@@ -424,6 +476,24 @@ def merge_caption_decisions_with_whisper(
     return merged
 
 
+def _coerce_reframe(reframe: Any) -> dict[str, Any]:
+    defaults: dict[str, Any] = {
+        "enabled": False,
+        "target_aspect_ratio": "9:16",
+        "focus": "center",
+    }
+    if not isinstance(reframe, dict):
+        return dict(defaults)
+    merged: dict[str, Any] = {**defaults, **reframe}
+    focus = str(merged.get("focus", "center")).strip().lower()
+    if focus == "face_track":
+        focus = "center"
+    if focus not in ALLOWED_REFRAME_FOCUS:
+        focus = "center"
+    merged["focus"] = focus
+    return merged
+
+
 def default_keep_plan(
     source_meta: dict[str, Any],
     caption_words: list[dict[str, Any]] | None = None,
@@ -465,7 +535,7 @@ def default_keep_plan(
         "reframe": {
             "enabled": False,
             "target_aspect_ratio": "9:16",
-            "focus": "face_track",
+            "focus": "center",
         },
     }
 
@@ -488,7 +558,7 @@ def build_final_plan(
         },
         "segments": make_gapless_segments(model_plan.get("segments", []), duration_s),
         "captions": _build_output_captions(model_captions),
-        "zooms": filter_timed_items(model_plan.get("zooms", []), duration_s),
+        "zooms": filter_zooms(model_plan.get("zooms", []), duration_s),
         "overlays": filter_overlays(model_plan.get("overlays", []), duration_s),
         "text_overlays": filter_timed_items(model_plan.get("text_overlays", []), duration_s),
         "music": model_plan.get("music")
@@ -500,12 +570,7 @@ def build_final_plan(
             "volume": 0.15,
             "duck_under_speech": True,
         },
-        "reframe": model_plan.get("reframe")
-        or {
-            "enabled": False,
-            "target_aspect_ratio": "9:16",
-            "focus": "face_track",
-        },
+        "reframe": _coerce_reframe(model_plan.get("reframe")),
     }
 
     # Whisper timings are authoritative; model can still contribute creative decisions

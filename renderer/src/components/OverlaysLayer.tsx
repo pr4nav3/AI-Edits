@@ -1,7 +1,10 @@
 import React from "react";
 import { AbsoluteFill, Img, interpolate, Sequence, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import type { EditPlan, Overlay } from "../types/editPlan";
-import { sourceTimeToOutputSeconds } from "../lib/timeMap";
+import {
+  sourceTimeToOutputSeconds,
+  sourceTimeToOutputSecondsForRangeEnd,
+} from "../lib/timeMap";
 import type { OutputTimeline } from "../lib/timeMap";
 
 function boxForPosition(
@@ -97,7 +100,7 @@ export const OverlaysLayer: React.FC<Props> = ({
     <AbsoluteFill>
       {overlays.map((o, i) => {
         const startOut = sourceTimeToOutputSeconds(editPlan, o.start_s, timeline);
-        const endOut = sourceTimeToOutputSeconds(editPlan, o.end_s, timeline);
+        const endOut = sourceTimeToOutputSecondsForRangeEnd(editPlan, o.end_s, timeline);
         if (startOut === null || endOut === null) return null;
         const from = Math.max(0, Math.floor(startOut * fps));
         const to = Math.max(from + 1, Math.ceil(endOut * fps));
@@ -108,6 +111,7 @@ export const OverlaysLayer: React.FC<Props> = ({
         if (!src) {
           return null;
         }
+        const isFullscreen = o.position === "fullscreen";
         return (
           <Sequence key={i} from={from} durationInFrames={durationInFrames} layout="none">
             <div
@@ -116,8 +120,8 @@ export const OverlaysLayer: React.FC<Props> = ({
                 ...boxForPosition(o.position),
                 ...anim,
                 overflow: "hidden",
-                borderRadius: 12,
-                boxShadow: "0 8px 32px rgba(0,0,0,0.45)",
+                borderRadius: isFullscreen ? 0 : 12,
+                boxShadow: isFullscreen ? "none" : "0 8px 32px rgba(0,0,0,0.45)",
               }}
             >
               <Img src={src} style={{ width: "100%", height: "100%", objectFit: "cover" }} />

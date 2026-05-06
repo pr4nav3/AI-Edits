@@ -64,11 +64,17 @@ export type Captions = {
   words: CaptionWord[];
 };
 
+/** 3×3 grid cell for zoom transform origin (deterministic, symmetric). */
 export type ZoomAnchor =
-  | "face"
+  | "top_left"
+  | "top_center"
+  | "top_right"
+  | "center_left"
   | "center"
-  | "top_third"
-  | "bottom_third"
+  | "center_right"
+  | "bottom_left"
+  | "bottom_center"
+  | "bottom_right"
   | "custom";
 
 export type ZoomEasing =
@@ -170,7 +176,7 @@ export type Music = {
 
 export type TargetAspectRatio = "16:9" | "9:16" | "1:1" | "4:5";
 
-export type ReframeFocus = "face_track" | "center" | "custom";
+export type ReframeFocus = "center" | "custom";
 
 export type Reframe = {
   enabled?: boolean;
